@@ -1,0 +1,847 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The Floor</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap">
+<style>
+/* Layout: a hospital tracker board at night. One sticky clock bar, the board as home, each patient a room you step into with a live bedside monitor. */
+:root{
+  color-scheme:dark;
+  --bg:#0d1422; --panel:#151e31; --panel2:#1b2640; --line:#2a3757; --ink:#eaf0fb; --mute:#93a2c0;
+  --lamp:#f3b454; --lamp-ink:#1d1403; --sea:#49d3c2;
+  --good:#4fd08a; --ok:#f3b454; --bad:#ff6b6b;
+  --c1:#3b8cff; --c2:#f0524f; --c3:#f2c230; --c4:#3fbf6e; --c5:#e9edf5;
+  --mon:#05080d; --mon-line:#1a2433; --ecg:#56f08c; --pleth:#58c8ff; --mon-bp:#ff7a7a; --mon-ink:#dfe7f2; --mon-rr:#f3e36a;
+  --shadow:0 12px 40px rgba(0,0,0,.35);
+  --display:"Bricolage Grotesque","IBM Plex Sans",system-ui,sans-serif;
+  --body:"IBM Plex Sans","IBM Plex Sans Arabic",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --ar:"IBM Plex Sans Arabic","IBM Plex Sans",Tahoma,sans-serif;
+}
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){
+  color-scheme:light;
+  --bg:#eef1f7; --panel:#ffffff; --panel2:#f5f7fc; --line:#d5dbe9; --ink:#121a2c; --mute:#56637f;
+  --lamp:#b96a00; --lamp-ink:#fff8ea; --sea:#0b7f73;
+  --good:#12804a; --ok:#a86400; --bad:#c62f2f;
+  --c1:#1f6fe0; --c2:#d43a37; --c3:#c79a00; --c4:#218a4b; --c5:#7c879c;
+  --shadow:0 10px 30px rgba(30,45,80,.12);
+}}
+:root[data-theme="light"]{
+  color-scheme:light;
+  --bg:#eef1f7; --panel:#ffffff; --panel2:#f5f7fc; --line:#d5dbe9; --ink:#121a2c; --mute:#56637f;
+  --lamp:#b96a00; --lamp-ink:#fff8ea; --sea:#0b7f73;
+  --good:#12804a; --ok:#a86400; --bad:#c62f2f;
+  --c1:#1f6fe0; --c2:#d43a37; --c3:#c79a00; --c4:#218a4b; --c5:#7c879c;
+  --shadow:0 10px 30px rgba(30,45,80,.12);
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 var(--body);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1}
+p{margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.eyebrow{font:600 .72rem/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+
+/* top bar */
+#bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+#bar .wrap{display:flex;align-items:center;gap:14px;padding-block:10px}
+.brand{font:800 1.15rem/1 var(--display);letter-spacing:-.01em}
+.brand i{font-style:normal;color:var(--lamp)}
+.where{color:var(--mute);font-size:.8rem;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.clock{font:600 1.35rem/1 var(--mono);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.clock small{font-size:.62rem;color:var(--mute);letter-spacing:.12em;display:block;text-align:right;margin-top:3px}
+.iconbtn{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:.8rem;color:var(--mute);white-space:nowrap}
+.iconbtn.on{color:var(--sea);border-color:var(--sea)}
+#shiftline{height:2px;background:var(--line)}#shiftline b{display:block;height:100%;background:var(--lamp);width:0;transition:width .6s}
+
+main{padding-block:22px 60px}
+.btn{background:var(--lamp);color:var(--lamp-ink);border:0;border-radius:12px;padding:13px 20px;font-weight:600;font-size:1rem}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.sm{padding:8px 14px;font-size:.88rem;border-radius:10px}
+
+/* intro */
+.intro{display:grid;grid-template-columns:1.1fr .9fr;gap:36px;align-items:center;padding-top:18px}
+.intro h1{font-size:clamp(2.6rem,7vw,4.6rem);font-weight:800;letter-spacing:-.03em}
+.intro h1 em{font-style:normal;color:var(--lamp)}
+.intro .lede{font-size:1.12rem;color:var(--mute);max-width:34em;margin-top:16px}
+.setup{display:grid;gap:14px;margin-top:26px;max-width:420px}
+.setup label{font-size:.82rem;color:var(--mute);display:grid;gap:6px}
+.setup input{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font:inherit;color:var(--ink);width:100%}
+.seg{display:flex;gap:8px}
+.seg button{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;font-family:var(--ar);font-size:1.05rem}
+.seg button.on{border-color:var(--lamp);box-shadow:inset 0 0 0 1px var(--lamp);color:var(--lamp)}
+.how{display:grid;gap:10px;margin-top:26px;padding:0;list-style:none;color:var(--mute);font-size:.94rem;max-width:36em}
+.how b{color:var(--ink)}
+.heromon{border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}
+.fine{color:var(--mute);font-size:.78rem;margin-top:34px;max-width:60em}
+
+/* monitor (a device: same look in both themes) */
+.mon{background:var(--mon);border:1px solid var(--mon-line);border-radius:14px;overflow:hidden;color:var(--mon-ink)}
+.mon canvas{display:block;width:100%;height:150px}
+.vit{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--mon-line)}
+.vit div{padding:8px 10px;border-right:1px solid var(--mon-line);min-width:0}
+.vit div:last-child{border:0}
+.vit span{display:block;font:500 .62rem/1 var(--mono);letter-spacing:.1em;opacity:.7}
+.vit b{font:600 1.35rem/1.2 var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.v-hr{color:var(--ecg)}.v-sp{color:var(--pleth)}.v-bp{color:var(--mon-bp)}.v-rr{color:var(--mon-rr)}
+.vit .v-bp b{font-size:1.05rem;line-height:1.55}
+.mon.alarm{animation:alarm 1s infinite}
+@keyframes alarm{50%{box-shadow:0 0 0 3px var(--bad)}}
+
+/* board */
+.board{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:26px;align-items:start}
+.sect{margin-bottom:26px}
+.sect>h2{font-size:.78rem;font-family:var(--mono);font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin-bottom:10px;display:flex;gap:8px;align-items:center}
+.sect>h2 .n{background:var(--panel2);border-radius:99px;padding:2px 8px;color:var(--ink)}
+.cards{display:grid;gap:10px}
+.pc{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;text-align:left;width:100%}
+.pc.door{border-color:var(--lamp);animation:knock 1.6s infinite}
+@keyframes knock{50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--lamp) 25%,transparent)}}
+.pc.locked{opacity:.55}
+.pc.pend{background:transparent;border-style:dashed}
+.pc h3{font-size:1.08rem;font-weight:700}
+.pc .sub{color:var(--mute);font-size:.88rem}
+.pc .go{font:600 .8rem var(--mono);color:var(--lamp);white-space:nowrap}
+.ctas{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font:700 1.15rem var(--mono);color:#fff;background:var(--panel2)}
+.ctas.q{color:var(--mute);border:1px dashed var(--line)}
+.k1{background:var(--c1)}.k2{background:var(--c2)}.k3{background:var(--c3);color:#221a00}.k4{background:var(--c4)}.k5{background:var(--c5);color:#1b2233}
+.beat{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--bad);margin-right:6px;animation:beat 1s infinite}
+@keyframes beat{0%,30%{transform:scale(1)}12%{transform:scale(1.6)}}
+.quiet{border:1px dashed var(--line);border-radius:14px;padding:22px;color:var(--mute);display:grid;gap:14px;justify-items:start}
+.done{display:flex;flex-wrap:wrap;gap:8px}
+.done span{font-size:.82rem;color:var(--mute);border:1px solid var(--line);border-radius:99px;padding:5px 12px}
+.pager{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px)}
+.pager h2{font:600 .78rem var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin-bottom:8px}
+.msgs{display:grid;gap:10px;max-height:60vh;overflow:auto}
+.msg{font-size:.88rem;border-left:2px solid var(--line);padding-left:10px}
+.msg.h{border-color:var(--sea)}
+.msg time{font:500 .7rem var(--mono);color:var(--mute);display:block}
+.msg b{color:var(--sea);font-weight:600}
+
+/* triage + encounter */
+.sheet{max-width:760px;margin:0 auto;display:grid;gap:18px}
+.look{font-size:1.12rem}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips span{font:500 .88rem var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+.chips span.ab{border-color:var(--bad);color:var(--bad)}
+.say{background:var(--panel);border:1px solid var(--line);border-radius:16px 16px 16px 4px;padding:14px 16px}
+.say .who{font:600 .7rem var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.say .ar{font-family:var(--ar);font-size:1.3rem;line-height:1.8;direction:rtl;text-align:right;margin:4px 0}
+.say .en{color:var(--mute);font-size:.9rem;font-style:italic}
+.levels{display:grid;gap:8px}
+.lv{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 14px 8px 8px;text-align:left}
+.lv b{font-weight:600}.lv small{color:var(--mute);font:500 .78rem var(--mono)}
+.lv.right{border-color:var(--good);box-shadow:inset 0 0 0 1px var(--good)}
+.lv.wrong{border-color:var(--bad)}
+.lv:disabled{cursor:default}
+.enc{display:grid;grid-template-columns:380px minmax(0,1fr);gap:26px;align-items:start}
+.side{position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px);display:grid;gap:12px}
+.pthead{display:flex;gap:12px;align-items:center}
+.pthead h2{font-size:1.3rem}
+.pthead .sub{color:var(--mute);font-size:.86rem}
+.story{display:grid;gap:16px;min-width:0}
+.story .x{font-size:1.06rem;max-width:42em}
+.q{font:700 1.3rem/1.25 var(--display)}
+.opts{display:grid;gap:8px}
+.opt{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;align-items:start;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;text-align:left}
+.opt i{font:600 .8rem/26px var(--mono);font-style:normal;width:26px;height:26px;border-radius:7px;background:var(--panel2);text-align:center;color:var(--mute)}
+.opt:disabled{cursor:default;opacity:.6}
+.opt.s2{border-color:var(--good);opacity:1}.opt.s2 i{background:var(--good);color:#fff}
+.opt.pick.s1{border-color:var(--ok);opacity:1}.opt.pick.s1 i{background:var(--ok);color:#fff}
+.opt.pick.s0{border-color:var(--bad);opacity:1}.opt.pick.s0 i{background:var(--bad);color:#fff}
+@media (hover:hover) and (pointer:fine){.opt:not(:disabled):hover,.lv:not(:disabled):hover,.pc:not(.locked):not(.pend):hover{border-color:var(--lamp)}}
+.fb{border-radius:14px;padding:16px;background:var(--panel2);display:grid;gap:8px}
+.fb .tag{font:600 .74rem var(--mono);letter-spacing:.12em;text-transform:uppercase}
+.fb.s2 .tag{color:var(--good)}.fb.s1 .tag{color:var(--ok)}.fb.s0 .tag{color:var(--bad)}
+.fb .han{border-top:1px solid var(--line);padding-top:8px;font-size:.94rem}
+.fb .han b{color:var(--sea)}
+.hint{background:none;border:0;color:var(--sea);padding:0;font-size:.9rem;text-align:left;text-decoration:underline;text-underline-offset:3px}
+.hintx{color:var(--sea);font-size:.94rem;font-style:italic}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.cost{font:500 .78rem var(--mono);color:var(--mute)}
+
+/* CPR + shock */
+.cpr{display:grid;gap:16px;justify-items:center;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px 16px}
+.push{width:150px;height:150px;border-radius:50%;border:0;background:var(--bad);color:#fff;font:800 1.5rem var(--display);position:relative;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.push::after{content:"";position:absolute;inset:-10px;border-radius:50%;border:3px solid var(--sea);opacity:.0;animation:guide .545s infinite}
+@keyframes guide{0%{opacity:.9;transform:scale(.92)}100%{opacity:0;transform:scale(1.12)}}
+.push:active{transform:scale(.94)}
+.rate{font:600 2.2rem/1 var(--mono);font-variant-numeric:tabular-nums}
+.rate small{font-size:.8rem;color:var(--mute);margin-left:6px}
+.gauge{width:min(420px,100%);height:14px;border-radius:99px;background:var(--panel2);position:relative;overflow:hidden}
+.gauge .zone{position:absolute;left:40%;width:20%;top:0;bottom:0;background:color-mix(in srgb,var(--good) 45%,transparent)}
+.gauge .pin{position:absolute;top:-2px;bottom:-2px;width:4px;background:var(--ink);border-radius:2px;left:0;transition:left .15s}
+.prog{width:min(420px,100%);height:6px;border-radius:99px;background:var(--panel2);overflow:hidden}.prog b{display:block;height:100%;background:var(--good);width:0}
+.coach{font-weight:600;min-height:1.5em}
+.charge{height:10px;border-radius:99px;background:var(--panel2);overflow:hidden;width:min(420px,100%)}
+.charge b{display:block;height:100%;width:0;background:var(--lamp)}
+.charge.go b{width:100%;transition:width 1.6s linear}
+#flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:50}
+#flash.on{animation:fl .5s}
+@keyframes fl{0%{opacity:.95}100%{opacity:0}}
+#code{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:color-mix(in srgb,var(--c2) 92%,#000);color:#fff;text-align:center;padding:24px;animation:cb 1s infinite}
+@keyframes cb{50%{background:color-mix(in srgb,var(--c2) 70%,#000)}}
+#code h1{font-size:clamp(3rem,12vw,7rem);font-weight:800;letter-spacing:-.03em}
+#code p{font-size:1.2rem;margin:14px 0 26px}
+#code .btn{background:#fff;color:#7a0e0c}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translate(-50%,30px);background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:12px;font-weight:600;font-size:.92rem;opacity:0;transition:.3s;z-index:30;max-width:calc(100% - 32px);pointer-events:none}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* debrief */
+.deb{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:30px;align-items:start}
+.deb h1{font-size:clamp(2.2rem,6vw,3.6rem);font-weight:800;letter-spacing:-.03em}
+.big{font:600 4rem/1 var(--mono);color:var(--lamp)}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th{font:600 .7rem var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mute);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.dots i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}
+.d2{background:var(--good)}.d1{background:var(--ok)}.d0{background:var(--bad)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
+.pocket{display:grid;gap:8px;list-style:none;padding:0;margin:12px 0 0}
+.pocket li{font-size:.92rem;padding-left:18px;position:relative}
+.pocket li::before{content:"";position:absolute;left:0;top:.6em;width:8px;height:8px;border-radius:50%;background:var(--good)}
+.pocket li.rev::before{background:var(--bad)}
+.pocket li.rev{font-weight:600}
+svg text{font:600 11px var(--mono);fill:var(--mute)}
+
+@media (max-width:899px){
+  .intro,.board,.enc,.deb{grid-template-columns:minmax(0,1fr)}
+  .side{position:sticky;top:calc(env(safe-area-inset-top,0px) + 58px);z-index:5;background:var(--bg);padding-bottom:6px}
+  .mon canvas{height:96px}
+  .vit b{font-size:1.05rem}.vit .v-bp b{font-size:.86rem}
+  .vit div{padding:6px 6px}
+  .pager{position:static}
+  .where{display:none}
+  .brand{flex:1}
+  .pthead h2{font-size:1.1rem}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div id="bar"><div class="wrap">
+  <div class="brand">The <i>Floor</i></div>
+  <div class="where">Emergency Department · Corniche Medical City, Jeddah</div>
+  <button class="iconbtn" id="snd" onclick="toggleSound()">Sound off</button>
+  <div class="clock"><span id="clk">19:00</span><small>SHIFT ENDS 03:00</small></div>
+</div><div id="shiftline"><b></b></div></div>
+<main class="wrap" id="app"></main>
+<div id="toast"></div><div id="flash"></div>
+
+<script>
+/* ================= content ================= */
+const CT={1:['Resuscitation','see now'],2:['Emergent','within 15 min'],3:['Urgent','within 30 min'],4:['Less urgent','within 60 min'],5:['Non-urgent','within 120 min']};
+const TARGET={1:5,2:15,3:30,4:60,5:120};
+const COMP={R:'Recognise',A:'Act',P:'Prioritise',C:'Communicate',S:'Know your limits'};
+const STEP_MIN=10;
+
+const PATIENTS=[
+{id:'faisal',name:'Faisal',age:22,sex:'M',cc:'Twisted ankle',arr:1140,ctas:4,bed:'Fast track 3',hr:82,
+ door:{look:`Hops in on a friend's shoulder, laughing at himself. Right ankle swollen on the outside. Talking in full sentences.`,
+  v:{hr:82,bp:'124/78',rr:14,sp:99,t:36.8},
+  say:['Faisal',`يا {دكتور|دكتورة} لفّت رجلي وأنا ألعب بادل، ودحين مو قادر أدوس عليها زي الناس.`,`Doctor, I twisted my ankle playing padel and now I can't put weight on it properly.`]},
+ why:`Stable vitals, one limb, moderate pain, at most one investigation. CTAS 4: safe to wait up to an hour.`,
+ stages:[
+ {label:'See patient',steps:[
+  {k:'R',x:`Faisal's right ankle is swollen over the outer side. He managed four limping steps into the cubicle. When you press the back edge of the lateral malleolus he pulls away sharply. The base of the fifth metatarsal and the navicular are not tender.`,
+   q:`Does he need an X-ray?`,
+   hint:`The rule has two halves, Doctor: walking, and pressing on bone. Which half did he fail?`,
+   take:`Ottawa ankle: X-ray for malleolar pain plus bone tenderness at the posterior edge or tip of either malleolus, or if unable to walk 4 steps.`,
+   ch:[[`Ankle X-ray: bone tenderness at the posterior lateral malleolus is an Ottawa criterion`,2,`One criterion is enough. The Ottawa rules ask for an X-ray when there is malleolar pain plus bone tenderness at the posterior edge or tip of either malleolus, or when the patient can't walk four steps. Walking does not cancel bony tenderness.`],
+    [`No X-ray: he walked four steps, so the Ottawa ankle rules are negative`,0,`Walking four steps clears only one of the criteria. He still has bone tenderness at the posterior lateral malleolus, and that alone earns the film.`],
+    [`Ankle and foot X-rays together, to be sure that nothing is missed`,1,`The ankle film is right. A foot series needs midfoot pain plus tenderness at the fifth metatarsal base or navicular, and he has neither. Extra films mean extra radiation and a longer wait.`],
+    [`CT of the ankle, because plain films can miss small fractures`,0,`CT is for fractures already seen or strongly suspected after a plain film. Start with the test the rule gives you.`]]}],
+  out:`X-ray requested. Faisal gets ice, elevation and paracetamol while he waits.`,wait:35,waitLabel:'X-ray'},
+ {label:'X-ray back',steps:[
+  {k:'S',x:`X-ray: no fracture. You explain rest, ice, compression, elevation and early movement. Faisal nods, then leans in.`,
+   say:['Faisal',`طيب يا {دكتور|دكتورة}، {اكتبلي|اكتبيلي} إجازة يومين الله {يخليك|يخليكي}، عندي دوام بكرة.`,`OK Doctor, write me two days of sick leave, please. I have work tomorrow.`],
+   q:`What do you do?`,
+   hint:`Check what your badge lets you sign, Doctor. Then think about who can.`,
+   take:`Interns cannot issue sick leave (Seha), medical reports, death certificates or discharges. Find the person who can.`,
+   ch:[[`Explain that interns can't issue sick leave, and ask Dr. Fahad to review him for it`,2,`Sick leave in Saudi Arabia is issued electronically through the Seha platform by a licensed physician. As an intern you are not yet SCFHS-licensed, so you can't issue it, but you can make sure the right person does. Honest and helpful.`],
+    [`Write a short signed note on hospital paper that he can show his manager`,0,`A handwritten note from an intern is not a valid sick leave, and it puts your signature on a document you have no authority to issue.`],
+    [`Tell him that sick leave is not something the emergency department gives`,0,`Not true, and it leaves him stuck. Emergency physicians do issue sick leave when it is indicated. You just aren't the one who can.`],
+    [`Promise him the two days, and say the registrar will sign for it later`,1,`Right person, wrong promise. Whether leave is indicated and for how long is the licensed physician's decision. Never promise what someone else has to sign.`]]}],
+  dispo:`Home with ankle advice. Sick leave issued by Dr. Fahad.`}]},
+
+{id:'reema',name:'Reema',age:24,sex:'F',cc:'“Panic attack”',arr:1140,ctas:2,bed:'Bed 4',hr:124,
+ door:{look:`Walks in holding her sister's arm, breathing deep and fast. Lips dry, eyes sunken. Vomiting since yesterday, and up all night drinking water.`,
+  v:{hr:124,bp:'100/60',rr:30,sp:99,t:37.1},
+  say:['Her sister',`يا {دكتور|دكتورة}، أختي من أمس وهي ترجّع ونفَسها سريع. أكيد نوبة هلع، هي مرة تتوتر أيام الاختبارات.`,`Doctor, my sister has been vomiting since yesterday and breathing fast. It must be a panic attack, she gets very anxious at exam time.`]},
+ why:`Heart rate 124 and respiratory rate 30 with dehydration are abnormal vitals, whatever the label. A relative's diagnosis is not a triage category. CTAS 2: seen within 15 minutes.`,
+ stages:[
+ {label:'See patient',steps:[
+  {k:'R',x:`Reema's chest is clear and her sats are 99% on room air, yet she is taking deep, sighing breaths 30 times a minute. Her breath smells sweet, a little like nail-polish remover.`,
+   say:['Reema',`حاسة إني مو قادرة آخذ نفَسي.. وعطشانة مرة.`,`I feel like I can't catch my breath... and I'm so thirsty.`],
+   q:`What is your first move?`,
+   hint:`Her lungs are fine but she's breathing like she ran here. What is she trying to breathe off? I have the glucometer in my pocket.`,
+   take:`Fast deep breathing with a clear chest and normal sats is acidosis until proven otherwise. Check glucose on everyone.`,
+   ch:[[`Bedside glucose and a venous blood gas now, before settling on anxiety`,2,`Deep fast breathing with clear lungs and normal sats is the body blowing off acid (Kussmaul breathing). Add thirst, vomiting and that sweet smell, and a ten-second finger-prick answers the question. Panic attack is a diagnosis you reach after excluding the dangerous ones.`],
+    [`Coach slow breathing and reassure her, then reassess in twenty minutes`,0,`That treats the label, not the patient. Her fast breathing is compensation. Slow it down and the acidosis gets worse.`],
+    [`Lorazepam 1 mg to settle the panic, then take a calmer history from her`,0,`Sedating someone who is breathing fast to stay alive removes her compensation. Never sedate fast breathing you haven't explained.`],
+    [`Chest X-ray and D-dimer, to rule out a pulmonary embolism before anything`,1,`You're right not to accept “panic attack”, and PE is a fair thought. But her sats are 99%, and the fastest, cheapest test that explains everything is a finger-prick glucose.`]]},
+  {k:'A',x:`Glucose 28.4 mmol/L (511 mg/dL). Blood gas: pH 7.12, bicarbonate 9, ketones 5.8. This is diabetic ketoacidosis, and her first presentation of diabetes. The potassium result is still in the lab.`,
+   q:`What goes in first?`,
+   hint:`One result is still missing, Doctor. And one of these drugs moves it.`,
+   take:`DKA: fluids first (0.9% saline 1 L in the first hour). Know the potassium before insulin. Fixed-rate insulin 0.1 units/kg/h. No bicarbonate.`,
+   ch:[[`0.9% saline 1 litre over the first hour; insulin once the potassium is known`,2,`Fluids first: she is litres behind. Insulin pushes potassium into cells, so giving it blind can drop the potassium far enough to stop the heart. Wait for the number, and if it is below 3.5, replace potassium before insulin (CMC DKA protocol).`],
+    [`Insulin 10 units IV bolus now, because the glucose is the real emergency`,0,`Glucose is not what kills in DKA. Dehydration, acidosis and potassium shifts do. An insulin bolus before fluids and a potassium result risks sudden hypokalaemia.`],
+    [`Sodium bicarbonate infusion, to bring the pH of 7.12 back up quickly`,0,`Bicarbonate doesn't fix the cause and can worsen hypokalaemia. The acid clears when insulin switches off ketone production. It is a consultant decision reserved for extreme acidosis.`],
+    [`Start the saline and the insulin infusion together, so no time is lost`,1,`Nearly. Fluids, yes, and fixed-rate insulin at 0.1 units/kg/h is the right drug. But not before you know the potassium.`]]}],
+  out:`Saline is running. Potassium comes back at 5.1 and Dr. Fahad starts fixed-rate insulin at 0.1 units/kg/h. You'll recheck her in an hour.`,wait:50,waitLabel:'Recheck'},
+ {label:'One-hour recheck',mon:{hr:104,bp:'108/66',rr:22},steps:[
+  {k:'A',x:`An hour later Reema looks better. Glucose 13.2 mmol/L (238 mg/dL), ketones 3.9, potassium 3.8.`,
+   say:['Her sister',`الحمد لله السكر نزل! يعني خلاص نوقف المغذي؟`,`Thank God, the sugar came down! So we can stop the drip now?`],
+   q:`What now?`,
+   hint:`Which number tells you the DKA is finished? It isn't the one her sister is looking at.`,
+   take:`In DKA insulin treats the ketones, not the glucose. When glucose falls below 14 mmol/L add dextrose. Never just stop the insulin.`,
+   ch:[[`Keep the insulin running, add 10% dextrose, and add potassium to the fluids`,2,`Insulin is treating the ketones, not the glucose. Ketones are still 3.9, so insulin continues until they clear and she is eating. Dextrose lets you keep giving it safely, and her falling potassium needs replacing.`],
+    [`Stop the insulin infusion now, since the glucose is nearly back to normal`,0,`This is the classic DKA relapse. Stop the insulin with ketones at 3.9 and the acidosis comes straight back.`],
+    [`Halve the insulin rate, and recheck her glucose again in four hours' time`,1,`Some protocols do reduce the rate once dextrose is running. But four hours without a check is far too long, and you still haven't added dextrose or potassium.`],
+    [`Switch her to subcutaneous insulin and start preparing for discharge home`,0,`A first presentation of DKA with ketones still high is an admission, and discharge is never an intern's call.`]]}],
+  dispo:`Admitted under medicine. New type 1 diabetes.`}]},
+
+{id:'yousef',name:'Yousef',age:3,sex:'M',cc:'Seizure',arr:1180,ctas:1,bed:'Resus 2',hr:168,
+ door:{look:`A mother runs in carrying a three-year-old. His arms and legs are jerking, eyes rolled up, lips dusky. He feels burning hot. It started in the car about six minutes ago.`,
+  v:{hr:168,bp:'—',rr:'irregular',sp:88,t:39.6},
+  say:['His mother',`ولدي! ولدي يتشنج وما يوقف! الله يخليكم سووا شي!`,`My son! He's seizing and it won't stop! Please, do something!`]},
+ why:`Actively seizing with low sats. CTAS 1: straight to resus. You triage this one with your feet, by walking him in yourself.`,
+ stages:[
+ {label:'See now',mon:{sp:88},steps:[
+  {k:'A',x:`Resus 2. Yousef is still seizing. Maricel is already opening the airway trolley. By the wall clock it has been seven minutes.`,
+   q:`Your first actions?`,
+   hint:`Seven minutes, Doctor. The waiting part is over. Start where you always start.`,
+   take:`Seizure over 5 minutes: treat. Airway, oxygen, glucose, senior, benzodiazepine. Nothing in the mouth.`,
+   ch:[[`Open the airway, give high-flow oxygen, check glucose, and call Dr. Fahad`,2,`Airway and breathing first, even in a seizure. Glucose is the one cause you can fix in a minute. And past five minutes a seizure is status epilepticus until it stops: you need a senior and a benzodiazepine now.`],
+    [`Hold his limbs still and place a bite block so he can't bite his tongue`,0,`Restraint causes injuries, and anything in the mouth breaks teeth and blocks the airway. Protect him; don't restrain him.`],
+    [`Give rectal paracetamol first, because the fever is driving the seizure`,0,`Lowering the fever won't stop a seizure that is already running. Airway and a benzodiazepine come first.`],
+    [`Observe him closely, since most febrile seizures stop within minutes`,0,`True under five minutes. He is at seven. After five minutes a seizure is unlikely to stop without treatment, and gets harder to stop the longer it runs.`]]},
+  {k:'A',mon:{sp:95},x:`Glucose 5.9 mmol/L. Maricel gets a cannula in at the first attempt. Nobody has weighed him and there is no time to.`,
+   q:`Which dose do you ask for?`,
+   hint:`He's three. Age times two, plus…? Then tell me milligrams per kilo.`,
+   take:`Weight for ages 1 to 5: (age × 2) + 8 kg. Lorazepam 0.1 mg/kg IV, max 4 mg. No IV: buccal or IM midazolam.`,
+   ch:[[`Lorazepam 1.4 mg IV: that is 0.1 mg/kg for an estimated weight of 14 kg`,2,`Weight for ages 1 to 5 is (age × 2) + 8, so 14 kg. IV lorazepam 0.1 mg/kg, maximum 4 mg, repeated once if he is still seizing. With no IV you would give buccal or IM midazolam instead of waiting. Say the dose out loud in milligrams.`],
+    [`Lorazepam 4 mg IV: the standard dose used to treat status epilepticus`,0,`That is the adult dose, nearly three times too much for 14 kg. It could stop his breathing along with the seizure. Children are dosed by weight, every time.`],
+    [`Phenytoin 20 mg/kg IV over twenty minutes, because it lasts much longer`,0,`That is a second-line drug and takes twenty minutes to run in. Benzodiazepines come first because they work within a minute or two.`],
+    [`Lorazepam 0.7 mg IV: half of the usual dose, to protect his breathing`,1,`A good instinct to respect his airway. But under-dosing is the commonest reason seizures don't stop, and a prolonged seizure harms breathing more than the correct dose does.`]]},
+  {k:'C',mon:{hr:142,sp:98,rr:28},x:`Ninety seconds after the lorazepam the jerking stops. Yousef is sleepy but breathing well. His right eardrum is red and bulging. Dr. Fahad examines him and agrees: a febrile seizure with an ear infection. His mother has not let go of his hand.`,
+   say:['His mother',`يا {دكتور|دكتورة}، يعني ولدي عنده صرع؟ حيرجع له التشنج مرة ثانية؟`,`Doctor, does this mean my son has epilepsy? Will the seizures come back?`],
+   q:`What do you tell her?`,
+   hint:`She'll remember your exact words for years. Give her the truth, and something to do next time.`,
+   take:`Febrile seizure: common (2–5% of children), not epilepsy, about 1 in 3 recur. Give the family a plan, not a promise.`,
+   ch:[[`“It was frightening, but this is not epilepsy. About one child in three has another.”`,2,`Honest, calm and specific. Febrile seizures affect 2–5% of young children, don't damage the brain, and most children outgrow them. Give her the real recurrence risk and a plan: lay him on his side, time it, call 997 if it passes five minutes. Paediatrics will see him before anyone talks about home.`],
+    [`“It was only the fever. Now that it's treated, this will not happen to him again.”`,0,`A promise you can't keep. One child in three has another, and when it happens she will remember the doctor said it wouldn't.`],
+    [`“To be certain, he will need a brain scan and a lumbar puncture tonight.”`,0,`Not for a febrile seizure with a clear source in a child who is waking up normally. Tests he doesn't need frighten families and carry their own risks.`],
+    [`“The paediatric team will answer all of your questions when they arrive.”`,1,`Involving paediatrics is right. But she asked a question you can answer, and an hour of silence for a frightened mother is not neutral.`]]}],
+  dispo:`Observed and reviewed by paediatrics. Home with a seizure plan.`}]},
+
+{id:'fatimah',name:'Hajja Fatimah',age:71,sex:'F',cc:'Confused, fever',arr:1205,ctas:2,bed:'Bed 6',hr:118,
+ door:{look:`Brought in a wheelchair by her daughter. Drowsy, mumbling, skin hot and flushed. Known diabetic. She hasn't eaten since morning.`,
+  v:{hr:118,bp:'88/50',rr:24,sp:93,t:38.9},
+  say:['Her daughter',`أمي من الصبح وهي مو طبيعية، تخربط في الكلام وما تبغى تاكل ولا تشرب.`,`My mother hasn't been herself since morning. She's not making sense and won't eat or drink.`]},
+ why:`New confusion, fever, systolic 88 and heart rate 118: sepsis with shock until proven otherwise. CTAS 2, into a monitored bed now. In an older patient, “not herself” is a vital sign.`,
+ stages:[
+ {label:'See patient',steps:[
+  {k:'R',x:`In a monitored bed she opens her eyes to your voice but doesn't know where she is. Her daughter mentions three days of burning urine. Capillary refill is four seconds.`,
+   q:`What is your working plan?`,
+   hint:`Count them, Doctor: confused, breathing fast, pressure under 100. I've seen this one before.`,
+   take:`Infection plus confusion, RR ≥ 22 or systolic ≤ 100: think sepsis and act on suspicion.`,
+   ch:[[`Treat as septic shock now: start the hour-1 bundle and call Dr. Fahad`,2,`Suspected infection with confusion, fast breathing and low pressure. You don't need a lab to tell you. Each hour of delay to antibiotics in septic shock raises mortality. Start, then confirm.`],
+    [`Send urine and bloods, and start treatment once infection is confirmed`,0,`The results will confirm what her vitals already say, an hour too late. Sepsis is treated on suspicion.`],
+    [`Give paracetamol and oral fluids, and reassess her properly in one hour`,0,`A blood pressure of 88/50 with confusion means her organs are under-perfused now. An hour of watching is an hour of damage.`],
+    [`Arrange a CT brain first, because the confusion is the main complaint`,0,`Her confusion is a brain that isn't getting enough blood. Sending a shocked patient to the scanner is how people arrest in radiology.`]]},
+  {k:'A',x:`Dr. Fahad, on the phone: “I'm in the trauma bay. Start the bundle, I'll be there in ten.” She weighs about 60 kg.`,
+   q:`What do you order?`,
+   hint:`Which bottles do I fill before I hang the antibiotic, Doctor? And give me the fluid in millilitres.`,
+   take:`Sepsis hour-1: lactate, cultures then antibiotics, 30 mL/kg crystalloid if hypotensive or lactate ≥ 4, vasopressors for MAP ≥ 65.`,
+   ch:[[`Lactate and blood cultures, then IV antibiotics, with 30 mL/kg of crystalloid`,2,`The hour-1 bundle: lactate, cultures before antibiotics (without delaying them), broad-spectrum antibiotics, and 30 mL/kg of crystalloid for hypotension or lactate ≥ 4. For 60 kg that is 1.8 litres, started now and reassessed as it runs.`],
+    [`IV antibiotics straight away; the cultures can be taken after the first dose`,1,`Speed is right. But cultures take two minutes, and after antibiotics they often grow nothing, leaving the team treating blind for days.`],
+    [`500 mL of saline slowly over four hours, because of her age and her heart`,0,`Caution about overload is fair in known heart failure, but she is in shock. A maintenance drip won't restore perfusion. Give the bolus in portions and reassess after each.`],
+    [`Start noradrenaline first to raise the pressure, before giving any fluids`,0,`Vasopressors squeeze an empty tank. Fluids first, then noradrenaline if she stays hypotensive during or after them.`]]}],
+  out:`Cultures taken, antibiotics in at 14 minutes, first litre running. Lactate 4.6.`,wait:40,waitLabel:'Fluids running'},
+ {label:'Reassess after fluids',mon:{hr:112,bp:'84/48',sp:95},steps:[
+  {k:'C',x:`The full 1.8 litres are in. Blood pressure 84/48 (MAP 60), lactate 4.6, and only 10 mL of urine in the last hour. Dr. Fahad is still in the trauma bay. You pick up the phone.`,
+   q:`Which call gets him to the bedside?`,
+   hint:`Tell him who, what, the numbers, and what you want from him. In that order.`,
+   take:`Escalate with SBAR: who you are, the problem, the numbers, what you need. No apology.`,
+   ch:[[`“It's {DR}, bed 6. Fatimah, 71, septic shock. BP 84/48 after 1.8 litres, lactate 4.6. I think she needs noradrenaline and ICU. Please come now.”`,2,`That is SBAR in twenty seconds: situation, background, assessment, recommendation. Numbers, a clear ask and no apology. Seniors come faster when you tell them exactly why.`],
+    [`“Sorry to bother you, Dr. Fahad. When you have a minute, could you have a look at the lady in bed 6? I'm a little bit worried about her.”`,0,`He has no way to know whether “a little bit worried” means a rash or a dying patient. He will finish what he is doing first.`],
+    [`“Bed 6 is a 71-year-old diabetic who came with her daughter. She had burning urine for three days, and then this morning she started…”`,1,`All true, and he is still waiting for the point. Lead with the problem and what you need. The story comes after.`],
+    [`“Dr. Fahad, the pressure in bed 6 is still low after the fluids. Shall I give her another litre and call you back in an hour or so?”`,0,`You've offered him an easy reason to stay where he is. She has failed fluids. She needs vasopressors and ICU, and you need to say so.`]]}],
+  dispo:`Noradrenaline started. Admitted to ICU.`}]},
+
+{id:'abdullah',name:'Abdullah',age:34,sex:'M',cc:'Fever for 5 days',arr:1265,ctas:3,bed:'Bed 9',hr:108,
+ door:{look:`Walks in slowly, one hand on his stomach. The fever broke this morning, but he feels worse. Flushed face, a few pinpoint red dots on his forearms.`,
+  v:{hr:108,bp:'100/78',rr:20,sp:98,t:37.4},
+  say:['Abdullah',`الحرارة راحت اليوم الحمد لله، بس بطني يعورني مرة وأرجّع، واليوم طلع دم من لثتي.`,`The fever went today, thank God, but my stomach really hurts, I keep vomiting, and today my gums bled.`]},
+ why:`Stable but not well: a fast pulse, a narrow pulse pressure (100/78) and bleeding. CTAS 3, seen within 30 minutes. “The fever is gone” on day five is not reassurance.`,
+ stages:[
+ {label:'See patient',steps:[
+  {k:'R',x:`Abdullah lives in Jeddah and hasn't travelled. Five days of high fever, pain behind the eyes and aching bones, in a week when the department has seen several dengue cases after the rains. Today the fever is gone, but he has abdominal pain, four vomits and bleeding gums.`,
+   q:`How do you read this?`,
+   hint:`Third one this week, Doctor. The ones who worried us all said the same thing: the fever just went.`,
+   take:`Dengue: the danger starts as the fever settles (days 3–7). Warning signs: abdominal pain, persistent vomiting, mucosal bleeding, lethargy, rising haematocrit with falling platelets.`,
+   ch:[[`Dengue entering the critical phase with warning signs: bloods, IV access, senior`,2,`In dengue the dangerous window opens as the fever settles, when plasma starts leaking out of the vessels. Abdominal pain, persistent vomiting and mucosal bleeding are WHO warning signs. He needs a full blood count with haematocrit, a cannula and a senior.`],
+    [`A viral illness that is now recovering: discharge him home on paracetamol`,0,`This is the trap. In dengue, feeling worse as the fever falls is the warning, not the recovery.`],
+    [`A viral illness with body aches: give ibuprofen and review if no better`,0,`NSAIDs and aspirin are contraindicated in suspected dengue. They worsen bleeding as platelets fall. Paracetamol only.`],
+    [`Possible typhoid fever: start oral antibiotics and arrange clinic review`,0,`Typhoid is a fair thought in prolonged fever, but bleeding gums and a rash point to dengue, and nothing about him should go home tonight.`]]}],
+  out:`Bloods sent, cannula in, Dr. Fahad informed.`,wait:35,waitLabel:'Bloods'},
+ {label:'Bloods back',steps:[
+  {k:'A',x:`Haematocrit 52% (it was 44% at a clinic two days ago), platelets 48, dengue NS1 antigen positive. He asks for something stronger for the pain.`,
+   q:`What is the plan?`,
+   hint:`Careful with the needle and the painkiller cupboard, Doctor. Look at his platelets.`,
+   take:`Dengue with warning signs: paracetamol only (no NSAIDs, no IM injections), crystalloid 5–7 mL/kg/h, serial haematocrit, admit, notify.`,
+   ch:[[`Paracetamol only, IV crystalloid at 5–7 mL/kg/h, admit, repeat the haematocrit`,2,`A rising haematocrit with falling platelets means plasma is leaking. WHO guidance is isotonic crystalloid at 5–7 mL/kg/h for one to two hours, then reduced according to haematocrit and urine output. No NSAIDs, no intramuscular injections. Dengue is notifiable: infection control informs public health (CMC policy).`],
+    [`Platelet transfusion now, because a count of 48 risks a major haemorrhage`,0,`Platelets are not transfused to prevent bleeding in dengue. They are destroyed within hours and the volume adds to overload. They are for significant bleeding, on a senior's decision.`],
+    [`Diclofenac 75 mg IM for the pain, then discharge with clinic follow-up`,0,`Three errors in one line: an NSAID, an intramuscular injection with a platelet count of 48, and a discharge in the critical phase.`],
+    [`A 30 mL/kg crystalloid bolus, treating this the same way as septic shock`,0,`He is leaking, not yet in shock. Large boluses pour into the lungs and abdomen and return as fluid overload during recovery. Dengue fluids are careful and titrated.`]]}],
+  dispo:`Admitted for monitored fluids. Public health notified.`}]},
+
+{id:'lina',name:'Lina',age:21,sex:'F',cc:'Allergic reaction',arr:1270,ctas:1,bed:'Resus 1',hr:132,
+ door:{look:`Two friends half-carry her in from a restaurant on the Corniche. Lips and eyelids swollen, hives across her neck, voice hoarse, wheeze you can hear from the door. She ate dessert ten minutes ago.`,
+  v:{hr:132,bp:'82/50',rr:28,sp:91,t:36.9},
+  say:['Her friend',`يا {دكتور|دكتورة} الله {يخليك|يخليكي}! أكلت حلا فيه فستق وهي عندها حساسية، وشفايفها تنفخت وصوتها راح!`,`Doctor, please! She ate a dessert with pistachio and she's allergic. Her lips swelled up and her voice is gone!`]},
+ why:`Airway swelling, wheeze and low blood pressure after a known allergen: anaphylaxis with shock. CTAS 1, resus now.`,
+ stages:[
+ {label:'See now',steps:[
+  {k:'A',x:`Resus 1. Lina is frightened, hoarse and wheezy. Maricel has oxygen on her and is standing at the open drug cupboard, looking at you.`,
+   q:`First drug?`,
+   hint:`One drug, one muscle, Doctor. Tell me the dose in millilitres so I draw up the right ampoule.`,
+   take:`Anaphylaxis: adrenaline 0.5 mg IM (0.5 mL of 1:1000) into the outer thigh. Never the 1 mg IV arrest dose.`,
+   ch:[[`Adrenaline 0.5 mg IM into the outer thigh (0.5 mL of 1:1000)`,2,`Adrenaline, intramuscular, outer thigh, immediately. 0.5 mg is 0.5 mL of the 1:1000 ampoule. It is the only drug that reverses the airway swelling and the shock. Everything else is an extra.`],
+    [`Adrenaline 1 mg as an IV push (10 mL of the 1:10,000 syringe)`,0,`That is the cardiac arrest dose. In a patient with a pulse it can cause a lethal arrhythmia or a heart attack. Same drug, different dose, route and concentration: the classic fatal mix-up.`],
+    [`Chlorphenamine and hydrocortisone IV, then reassess her airway`,0,`They ease the itch, but do nothing for the airway or the blood pressure in the next ten minutes. Delay to adrenaline is what kills in anaphylaxis.`],
+    [`A salbutamol nebuliser first, to open her airways and ease the wheeze`,0,`Salbutamol may help the wheeze later, but it does nothing for a swollen upper airway or for shock.`]]},
+  {k:'A',mon:{hr:128,bp:'86/52',sp:93},x:`Five minutes later: blood pressure 86/52, still wheezy, still hoarse. She is struggling to sit bolt upright.`,
+   q:`Next step?`,
+   hint:`Five minutes are up, Doctor. And I don't like her sitting up with that pressure.`,
+   take:`No response at 5 minutes: repeat IM adrenaline. Lie flat, legs raised. Fluids. Call for help.`,
+   ch:[[`Repeat the IM adrenaline now, lay her flat with legs raised, and give a fluid bolus`,2,`IM adrenaline can be repeated every five minutes. Lying flat with legs raised keeps blood returning to the heart; patients in anaphylactic shock have arrested on being sat or stood up. Add 500–1000 mL of crystalloid and call Dr. Fahad: after two doses she may need an infusion.`],
+    [`Let her sit upright as she wants, and give the first dose ten more minutes to work`,0,`Sitting up with a pressure of 86 can empty the heart, and ten minutes is twice as long as you should wait.`],
+    [`Give the antihistamine and the steroid now, since the adrenaline has not worked`,0,`One dose not being enough is common, and the answer is more adrenaline.`],
+    [`Prepare to intubate her immediately, before the swelling can close the airway`,1,`You're right to worry about the airway and to call senior and anaesthetic help early. But the treatment for the swelling is adrenaline, and the second dose is ready in Maricel's hand.`]]}],
+  out:`Second dose in. Within minutes her voice clears and the wheeze fades. Blood pressure 108/68.`,wait:30,waitLabel:'Observation'},
+ {label:'Wants to go home',mon:{hr:96,bp:'112/70',sp:98,rr:18},steps:[
+  {k:'S',x:`Half an hour later Lina is sitting up and scrolling her phone, the hives fading.`,
+   say:['Lina',`أنا كويسة دحين الحمد لله.. أبغى أروح البيت، عندي اختبار بكرة.`,`I'm fine now, thank God. I want to go home, I have an exam tomorrow.`],
+   q:`What do you do?`,
+   hint:`She looks great. So did the last one, three hours before she came back. And who signs discharges here?`,
+   take:`After anaphylaxis: observe for a biphasic reaction, send home with an auto-injector and training, refer to allergy. Interns don't discharge.`,
+   ch:[[`Explain why she needs hours of observation, and that discharge is Dr. Fahad's call`,2,`Reactions can return hours later with no new exposure (a biphasic reaction), and she needed two doses. CMC policy is at least six hours of observation. Discharge is never an intern's decision, and when she does go it is with an adrenaline auto-injector, training and an allergy referral.`],
+    [`Let her go now with antihistamine tablets, as she has made a full recovery`,0,`She looks well because of two doses of a drug that wears off in minutes. And the discharge isn't yours to give.`],
+    [`Tell her that she must stay overnight and is not permitted to leave the unit`,1,`Right that she should stay, wrong way to get there. She is a competent adult. Explain the risk so that she chooses to stay, and involve Dr. Fahad if she still wants to leave.`],
+    [`Agree to discharge if her friend promises to stay with her through the night`,0,`A friend can't treat a closing airway, and it still isn't your discharge to make.`]]}],
+  dispo:`Observed six hours. Home with an auto-injector and allergy referral.`}]},
+
+{id:'majed',name:'Umm Majed',age:62,sex:'F',cc:'Sudden weakness',arr:1355,ctas:2,bed:'Resus 2',hr:92,rhythm:'af',
+ door:{look:`Wheeled in by her son straight from a family dinner. The right side of her face droops, her right arm drifts down, her speech is slurred but she follows commands. It began 40 minutes ago.`,
+  v:{hr:'92 irregular',bp:'178/96',rr:16,sp:97,t:36.7},
+  say:['Her son',`أمي كانت تتعشى معانا وفجأة طاحت الملعقة من يدها وصار كلامها ثقيل.`,`My mother was having dinner with us, and suddenly the spoon fell from her hand and her speech went heavy.`]},
+ why:`Face, arm, speech, and well inside the treatment window. An acute stroke is CTAS 2: every minute untreated costs close to two million neurons.`,
+ stages:[
+ {label:'See patient',steps:[
+  {k:'A',x:`Resus 2. Facial droop, right arm weakness, slurred speech. Her son is certain she was completely normal when dinner was served.`,
+   q:`First steps?`,
+   hint:`Time is the drug here, Doctor. One finger-prick, one question for the son, one phone call.`,
+   take:`Stroke: glucose, last-known-well time, stroke code, CT before any aspirin. Leave the BP unless above 185/110 before thrombolysis.`,
+   ch:[[`Check glucose, confirm the last-known-well time, and activate the stroke code`,2,`Glucose first: hypoglycaemia mimics stroke and is fixed in minutes. Last-known-well sets the clock for thrombolysis (4.5 hours). Then the stroke code, because a CT has to happen before any treatment.`],
+    [`Give aspirin 300 mg straight away, and then arrange an urgent CT brain`,0,`You can't tell a clot from a bleed at the bedside. Aspirin before CT can worsen a haemorrhage, and it is withheld for 24 hours after thrombolysis anyway.`],
+    [`Lower her blood pressure with IV labetalol, and then arrange a CT brain`,0,`In an acute stroke the high pressure is keeping threatened brain alive. It is treated only above 185/110 when thrombolysis is planned, and by the stroke team.`],
+    [`Take a full history and neurological examination before calling anyone`,1,`The details matter, but not before the call. The stroke team needs three things to start moving: the deficit, the time of onset and the glucose. Examine while they are on their way.`]]},
+  {k:'R',x:`Glucose 6.8 mmol/L. The stroke team is on its way. While you wait, look at her monitor and listen to it.`,
+   q:`What is the rhythm, and why does it matter tonight?`,
+   hint:`Try tapping your finger along with the beats, Doctor. Can you keep time with it?`,
+   take:`Atrial fibrillation: irregularly irregular, no P waves. In a stroke, tell the team: it is a likely source of the clot.`,
+   ch:[[`Atrial fibrillation: irregularly irregular, no P waves, a likely source of the clot`,2,`No P waves, a restless baseline and beats that never settle into a pattern. In AF, clot forms in the left atrium and can travel to the brain. Tell the stroke team: it shapes the work-up and her long-term anticoagulation, which does not start tonight.`],
+    [`Sinus arrhythmia: the rate is varying with her breathing, which is normal`,0,`Sinus arrhythmia has a P wave before every beat and speeds and slows smoothly with breathing. This has no P waves and no pattern at all.`],
+    [`Ventricular tachycardia: call the arrest team and bring the defibrillator`,0,`VT is fast, regular and wide. This is narrow, irregular and under 100, in a patient who is talking to you.`],
+    [`Movement artefact from her weak arm: reattach the leads and then recheck`,0,`Artefact doesn't produce clean, narrow QRS complexes at uneven intervals. Look at the blue trace: every one of those beats makes a pulse.`]]}],
+  out:`The stroke team arrives. She is in the CT scanner eight minutes later.`,wait:25,waitLabel:'CT brain'},
+ {label:'Back from CT',steps:[
+  {k:'S',x:`The CT shows no bleed. The stroke consultant recommends thrombolysis and explains it to Umm Majed. Her speech is slurred, but she listens, asks about the bleeding risk, and answers sensibly. Her son steps forward.`,
+   say:['Her son',`أنا ولدها، أنا أوقّع عنها. هي ما تفهم في هذي الأمور.`,`I'm her son, I'll sign for her. She doesn't understand these things.`],
+   q:`Who gives consent?`,
+   hint:`Ask yourself one thing, Doctor: can she understand and choose? Then you know whose signature it is.`,
+   take:`A competent adult woman consents for herself (MOH directive). Slurred speech is not loss of capacity. Involve the family, respectfully.`,
+   ch:[[`Umm Majed herself: she has capacity, so it is her decision, with her son beside her`,2,`Slurred speech is not lost capacity. She understands, weighs the risk and communicates a choice, so the consent is hers. In Saudi Arabia a competent adult woman consents to her own treatment (MOH directive); no guardian's signature is needed. Keep her son close and informed. He is frightened, not hostile.`],
+    [`Her son: as her closest male relative, he should sign the consent on her behalf`,0,`A common belief on the wards, and wrong. A relative signs only when the patient lacks capacity.`],
+    [`Both of them should sign, so that the family cannot raise objections afterwards`,1,`Involving him is kind and wise. Requiring his signature is not the rule, and it would hand a relative a veto over a competent patient's decision.`],
+    [`Neither: thrombolysis is an emergency treatment, so consent is not required`,0,`The emergency exception covers patients who cannot consent when delay would harm them. She can, and thrombolysis carries a real bleeding risk that is hers to weigh.`]]}],
+  dispo:`Thrombolysed 61 minutes after arrival. Stroke unit.`}]},
+
+{id:'khalid',name:'Abu Khalid',age:58,sex:'M',cc:'Chest pain',arr:1420,ctas:2,bed:'Resus 1',hr:56,
+ door:{look:`Walks in from his nephew's wedding with one hand pressed to his chest. Grey, sweating through his collar. The pain started 50 minutes ago and hasn't eased.`,
+  v:{hr:56,bp:'96/60',rr:20,sp:96,t:36.6},
+  say:['Abu Khalid',`يا {دكتور|دكتورة} صدري.. كأن أحد جالس عليه، والألم ماسك يدي اليسار.`,`Doctor, my chest... it's like someone is sitting on it, and the pain is gripping my left arm.`]},
+ why:`Crushing chest pain with sweating is an acute coronary syndrome until the ECG says otherwise. CTAS 2, and the ECG clock starts at the door.`,
+ stages:[
+ {label:'See patient',steps:[
+  {k:'A',x:`Resus 1. Abu Khalid smokes and has diabetes. He left the wedding hall because the pain would not pass.`,
+   q:`What must happen in the next ten minutes?`,
+   hint:`The machine is already at the bedside, Doctor. Ten stickers.`,
+   take:`Chest pain: 12-lead ECG within 10 minutes of arrival, shown to a senior.`,
+   ch:[[`A 12-lead ECG, read by you and shown to a senior, before anything else`,2,`Door-to-ECG in under ten minutes. It is the one test that changes everything this early: a STEMI needs a cath lab, not a blood result.`],
+    [`Troponin and routine bloods, then decide the next step on the results`,0,`Troponin takes an hour and can be normal early in a heart attack. The ECG takes three minutes.`],
+    [`Morphine for the pain and oxygen by mask, followed by a chest X-ray`,0,`Comfort before diagnosis. Oxygen is only for sats below 90%, and morphine can drop a pressure that is already 96.`],
+    [`A full history of his risk factors and a careful cardiac examination`,1,`All useful, and all of it can happen while the ECG leads are going on.`]]},
+  {k:'A',mon:{rhythm:'stemi'},x:`The ECG shows ST elevation in II, III and aVF, with reciprocal depression in I and aVL: an inferior STEMI. Heart rate 56, blood pressure 96/60.`,
+   q:`Your orders?`,
+   hint:`Look at his pressure before you reach for the spray, Doctor. And who opens the cath lab at midnight?`,
+   take:`STEMI: aspirin 300 mg chewed, cath lab now. Inferior STEMI with low BP: hold GTN and get a right-sided ECG.`,
+   ch:[[`Aspirin 300 mg chewed, call Dr. Fahad to activate the cath lab, and hold the GTN`,2,`Aspirin, chewed, immediately. The cath lab is the treatment, with a target of under 90 minutes from door to balloon. Hold the nitrates: an inferior STEMI with a low pressure and a slow pulse suggests the right ventricle is involved, and GTN can crash the blood pressure. Get a right-sided ECG.`],
+    [`Aspirin 300 mg chewed, and sublingual GTN every five minutes for the pain`,0,`Aspirin, yes. GTN, not here. With a pressure of 96 and a likely right ventricular infarct, nitrates can drop him into shock.`],
+    [`Aspirin 300 mg chewed, and call cardiology once the troponin confirms it`,0,`STEMI is diagnosed on the ECG. An hour waiting for a number is an hour of heart muscle dying.`],
+    [`High-flow oxygen, aspirin 75 mg, and move him to a monitored bed nearby`,0,`His sats are 96%, so oxygen adds nothing. 75 mg is the maintenance dose, not the loading dose. And nobody has called the cath lab.`]]}],
+  out:`Aspirin given. Dr. Fahad activates the cath lab; the team is 20 minutes away. Defibrillator pads go on Abu Khalid's chest as a precaution.`,wait:20,waitLabel:'Cath lab team'},
+ {label:'CODE BLUE',code:true,mon:{rhythm:'vf',hr:'—',bp:'—',sp:'—',rr:'—'},steps:[
+  {k:'A',x:`You are writing your note when the alarm from Resus 1 changes pitch. Abu Khalid's eyes are open, but he isn't looking at anything.`,
+   q:`What do you do first?`,
+   hint:`Look at HIM, Doctor, not the monitor!`,
+   take:`Collapse: check response, breathing and pulse in under 10 seconds. No pulse: call the code and start CPR.`,
+   ch:[[`Check for a response, breathing and a carotid pulse together, and call the code`,2,`Ten seconds, no more: shake and shout, watch the chest, feel the carotid. No pulse, or not sure: shout for help, call the code, start compressions. The monitor says VF, but you treat the patient, not the screen.`],
+    [`Run a 12-lead ECG straight away to see whether the infarct has extended`,0,`A 12-lead on a man with no pulse is three minutes of no blood to his brain.`],
+    [`Give a second dose of aspirin, and phone Dr. Fahad to ask for his advice`,0,`He needs hands on his chest and a defibrillator, and Dr. Fahad needs a code call, not a consult.`],
+    [`Reattach the monitor leads first, because this trace could be artefact`,0,`Loose leads can mimic VF, which is exactly why you check the patient and not the cables. He is unresponsive.`]]},
+  {t:'cpr',n:16,x:`No pulse. Maricel hits the code button. You are closest to the chest: heel of the hand on the centre of the sternum, arms straight, 5–6 cm deep, full recoil.`},
+  {k:'R',x:`The team arrives and the pads are connected. Compressions pause for the rhythm check. Look at the monitor.`,
+   q:`What is it, and what now?`,
+   hint:`Any complexes you can count, Doctor? No? Then you know which side of the algorithm we're on.`,
+   take:`Shockable rhythms: VF and pulseless VT. Not shockable: asystole and PEA.`,
+   ch:[[`Ventricular fibrillation, a shockable rhythm: charge, clear and shock`,2,`Chaotic, with no organised complexes: VF. Every minute without defibrillation costs roughly 10% of his chance of survival. Keep compressing while the defibrillator charges.`],
+    [`Asystole, which is not shockable: continue CPR and give adrenaline`,0,`Asystole is a nearly flat line. This trace is chaotic and coarse, and it will respond to a shock.`],
+    [`Ventricular fibrillation: give adrenaline 1 mg first, and then shock`,0,`Right rhythm, wrong order. Electricity before drugs. Adrenaline waits until after the second shock.`],
+    [`Fast atrial fibrillation: recheck his pulse before doing anything else`,0,`AF has QRS complexes. This has none, and he has no pulse.`]]},
+  {t:'shock',n:1,x:`Dr. Fahad has arrived. He looks at the monitor, then at you: “You run it. I'm right here.”`},
+  {k:'A',x:`Shock delivered. For a second the whole room is looking at you.`,
+   q:`Next?`,
+   hint:`Hands, Doctor. Where should somebody's hands be right now?`,
+   take:`After every shock: straight back to CPR for 2 minutes. No pulse check, no rhythm check.`,
+   ch:[[`Restart compressions immediately for two minutes, without checking the rhythm`,2,`Straight back on the chest. Even after a successful shock the heart needs a minute or two before it pumps properly. Pulse and rhythm checks wait until the end of the two-minute cycle.`],
+    [`Feel for a carotid pulse for ten seconds to see if the shock has worked`,0,`Ten seconds of pause is ten seconds without blood flow, and a stunned heart often has no pulse yet even when the shock worked.`],
+    [`Watch the monitor for a few seconds to see which rhythm he is in now`,0,`The rhythm in the first seconds after a shock tells you nothing useful, and his brain is waiting.`],
+    [`Deliver a second shock straight away, while the defibrillator is ready`,0,`Stacked shocks aren't part of the standard algorithm. The CPR between shocks is what makes the next one work.`]]},
+  {t:'cpr',n:16,x:`Two more minutes. Compressors should swap every cycle so that nobody tires, but tonight it's you again.`},
+  {t:'shock',n:2,x:`Rhythm check: still VF.`},
+  {k:'A',x:`Second shock delivered, compressions restarted, IV access secured. Maricel holds up two boxes.`,
+   q:`Which drug now?`,
+   hint:`Two shocks done, Doctor. Which box first, and how many milligrams?`,
+   take:`Shockable arrest: adrenaline 1 mg IV after the 2nd shock, then every 3–5 minutes.`,
+   ch:[[`Adrenaline 1 mg IV (10 mL of 1:10,000), repeated every 3 to 5 minutes`,2,`In a shockable arrest, adrenaline 1 mg IV goes in after the second shock and then every 3–5 minutes, which in practice is every other cycle. This is the arrest dose: twice the milligrams you gave Lina, ten times more dilute, and into a vein.`],
+    [`Amiodarone 300 mg IV bolus, followed by a 20 mL flush of normal saline`,1,`The right drug for VF that won't break, one shock early. Amiodarone follows the third shock.`],
+    [`Adrenaline 0.5 mg IM into the outer thigh (0.5 mL of the 1:1000 ampoule)`,0,`That is the anaphylaxis dose and route. In cardiac arrest nothing is absorbed from muscle.`],
+    [`Atropine 1 mg IV bolus, which can be repeated up to a total of 3 mg`,0,`Atropine is for a slow heart rate with a pulse. It left the arrest algorithm years ago.`]]},
+  {t:'cpr',n:16,x:`Adrenaline in, flushed. Back on the chest.`},
+  {t:'shock',n:3,x:`Rhythm check: VF persists.`},
+  {k:'A',x:`Third shock delivered. CPR continues.`,
+   q:`Next drug?`,
+   hint:`Three shocks. The other box now, Doctor. Tell me the milligrams.`,
+   take:`Amiodarone 300 mg IV after the 3rd shock; a further 150 mg after the 5th.`,
+   ch:[[`Amiodarone 300 mg IV bolus, with a further 150 mg after the fifth shock`,2,`Amiodarone 300 mg after the third shock, and 150 mg after the fifth if VF persists. Adrenaline is next due at the following cycle.`],
+    [`Amiodarone 150 mg IV, infused slowly over a period of ten minutes`,1,`Right drug. But that is the regimen for a stable tachycardia with a pulse. In arrest the first dose is 300 mg as a bolus.`],
+    [`Another adrenaline 1 mg IV, as the first dose has not yet worked`,1,`Not harmful, but early: adrenaline went in two minutes ago and is repeated every 3–5 minutes. The drug due now is amiodarone.`],
+    [`Adenosine 6 mg by rapid IV push, followed by a fast saline flush`,0,`Adenosine is for a regular narrow-complex tachycardia in a patient with a pulse. It does nothing in VF.`]]},
+  {k:'R',mon:{rhythm:'sinus',hr:94,noout:true},x:`Amiodarone in, two more minutes of compressions by the team. Rhythm check. The chaos on the monitor has gone: narrow, regular complexes at 94.`,
+   q:`What now?`,
+   hint:`Pretty rhythm. Is anybody home, Doctor? Fingers on his neck.`,
+   take:`An organised rhythm at a rhythm check: feel for a pulse. Rhythm without a pulse is PEA, so CPR continues.`,
+   ch:[[`Feel for a carotid pulse: an organised rhythm does not prove there is output`,2,`An organised rhythm could be a beating heart, or it could be PEA: electricity without a pulse. Ten seconds on the carotid tells you which. He has a strong pulse. Return of spontaneous circulation, nine minutes after he arrested.`],
+    [`Deliver one more shock, to make sure the new rhythm is going to hold`,0,`You never shock an organised rhythm in an arrest. A shock here could put him straight back into VF.`],
+    [`Stop the resuscitation and stand the team down: his heart has restarted`,0,`Maybe it has. Or this is PEA and he still has no circulation. You don't know until you feel a pulse.`],
+    [`Give another adrenaline 1 mg IV now, to support the rhythm he is in`,0,`Adrenaline into a heart that has just restarted can throw it back into VF. Pulse check first.`]]},
+  {k:'A',mon:{hr:94,bp:'104/62',sp:95,rr:14,noout:false},x:`He has a pulse and is starting to breathe for himself.`,
+   q:`Priorities now?`,
+   hint:`He's back, but why did he go? Start again from A, Doctor.`,
+   take:`After ROSC: ABCDE, SpO₂ 94–98%, 12-lead ECG, treat the cause (here, the cath lab).`,
+   ch:[[`Reassess ABCDE, titrate oxygen to sats of 94–98%, repeat the ECG, then cath lab`,2,`ROSC is the start of post-arrest care. Airway, breathing, blood pressure, glucose, and oxygen titrated to avoid both too little and too much. The cause is still a blocked artery, and the cath lab team has just walked in.`],
+    [`Keep him on 15 L/min of oxygen and transfer him to the ICU to stabilise`,1,`He will need the ICU, but after the artery is opened. And too much oxygen after ROSC causes harm of its own.`],
+    [`Pause the monitoring briefly so the team can debrief and write the notes`,0,`The first minutes after ROSC are when patients re-arrest. The debrief matters, and it happens after he is handed over.`],
+    [`Give amiodarone 150 mg and more adrenaline, to prevent a second arrest`,0,`Arrest drugs are for arrests. He now has a pulse; what prevents the next arrest is opening the artery.`]]},
+  {k:'C',x:`Abu Khalid goes to the cath lab. In the corridor his son Khalid has been watching the doors for twenty minutes. Dr. Fahad says quietly: “Come with me. You were there. He should hear it from both of us.”`,
+   say:['Khalid, his son',`يا {دكتور|دكتورة} طمّنّي.. أبويا كويس؟ إيش صار له؟`,`Doctor, tell me... is my father OK? What happened to him?`],
+   q:`What do you say?`,
+   hint:`Sit down first, Doctor. Then tell him the truth in words your own father would understand.`,
+   take:`Hard news: sit down, plain words, the hard fact first, what happens next, no false promises, senior beside you.`,
+   ch:[[`“Let's sit down. His heart stopped, and we restarted it. He is alive, and the next few hours are critical.”`,2,`Sit, use plain words, and say the hard thing first. Then what was done, where he is now, and what is still uncertain. No jargon and no promise you can't keep. With Dr. Fahad beside you, you have just done one of the hardest things in medicine properly.`],
+    [`“Don't worry, the danger has passed and he is fine now. You will have him home with you in a few days.”`,0,`He isn't fine, and you don't know that he will be home. Hope is welcome. A guarantee you can't keep is not.`],
+    [`“He had a VF arrest secondary to an inferior STEMI, and we achieved ROSC after three shocks and amiodarone.”`,0,`Every word is accurate, and Khalid understood none of them.`],
+    [`“I'm only the intern, so I can't say. The consultant will come and explain everything to you a bit later.”`,1,`Seniors should lead hard news, and Dr. Fahad is standing right beside you. But “only the intern” and “later” leave a son with nothing.`]]}],
+  dispo:`ROSC after three shocks. Stent to the right coronary artery.`}]}
+];
+const TIPS=[`Write your notes now, {DR}. At 3 a.m. you won't remember which bed had which potassium.`,
+`Drink some water. Interns faint more often than patients do.`,
+`A quiet board is the time to walk past your patients again. People change when nobody is looking.`,
+`If you're not sure, ask. Nobody here has ever been in trouble for calling too early.`,
+`Check the results you ordered. A test nobody reads is worse than a test nobody sent.`];
+
+/* ================= state ================= */
+const S={name:'',fem:false,sound:false,clock:1140,pts:[],pager:[],comp:{},asked:0,cur:null,tip:0,over:false};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const tx=s=>String(s).replace(/\{DR\}/g,'Dr. '+esc(S.name||'Intern')).replace(/\{([^{}|]*)\|([^{}|]*)\}/g,(m,a,b)=>S.fem?b:a);
+const hhmm=m=>{m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
+const store={get(k){try{return localStorage.getItem('thefloor.'+k)}catch(e){return null}},set(k,v){try{localStorage.setItem('thefloor.'+k,v)}catch(e){}}};
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),3200)}
+function page(who,x){S.pager.unshift({t:S.clock,who,x})}
+function score(k,got,max){const c=S.comp[k]||(S.comp[k]=[0,0]);c[0]+=got;c[1]+=max}
+
+/* ================= audio ================= */
+let AC=null;
+function tone(f,d,type,vol,f2){if(!S.sound||!AC)return;const o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime;o.type=type||'sine';o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+d);g.gain.setValueAtTime(vol||.05,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(AC.destination);o.start(t);o.stop(t+d+.02)}
+function toggleSound(){S.sound=!S.sound;if(S.sound&&!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){S.sound=false}}if(S.sound&&AC&&AC.state==='suspended')AC.resume();const b=$('#snd');b.textContent=S.sound?'Sound on':'Sound off';b.classList.toggle('on',S.sound);store.set('sound',S.sound?'1':'');if(S.sound)tone(880,.08)}
+function alarmSound(){for(let i=0;i<6;i++)setTimeout(()=>tone(i%2?660:990,.22,'square',.04),i*260)}
+
+/* ================= monitor ================= */
+const M={rhythm:'sinus',hr:80,sp:98,t:0,x:0,b:0,iv:.75,amp:1,tap:-9,out:true,ye:null,yp:null,flatUntil:0};
+const g=(x,m,s)=>{const d=(x-m)/s;return Math.exp(-d*d/2)};
+const bump=x=>x>0?(x/.09)*Math.exp(1-x/.09):0;
+function setMon(v){if(!v)return;const was=M.rhythm;
+  if(v.rhythm){M.rhythm=v.rhythm}
+  if(typeof v.hr==='number')M.hr=v.hr;
+  if(typeof v.sp==='number')M.sp=v.sp;
+  if('noout' in v)M.out=!v.noout;
+  if(M.rhythm!==was){M.b=M.t;M.iv=.3}
+  Object.assign(M.v=M.v||{},v);paintVitals()}
+function paintVitals(){const v=M.v||{},e=id=>document.getElementById(id);if(!e('v-hr'))return;
+  e('v-hr').textContent=v.hr??'—';e('v-sp').textContent=v.sp??'—';e('v-bp').textContent=v.bp??'—';e('v-rr').textContent=v.rr??'—';e('v-t').textContent=v.t??'—'}
+function sample(dt){M.t+=dt;const t=M.t;let r=M.rhythm,e=0,p=0;
+  if(t<M.flatUntil)return[.004*Math.sin(9*t),0];
+  if(r==='vf'){e=.3*Math.sin(27*t+1.6*Math.sin(4.4*t))*(.6+.4*Math.sin(1.9*t))+.11*Math.sin(44.6*t+Math.sin(3.1*t));
+    const d=t-M.tap;if(d<.6){e+=.7*g(d,.09,.045)-.22*g(d,.22,.06);p=.6*bump(d-.04)}}
+  else{
+    if(t-M.b>=M.iv){M.b+=M.iv;if(t-M.b>2)M.b=t;const hr=typeof M.hr==='number'?M.hr:80;
+      M.iv=60/hr*(r==='af'?.55+.9*Math.random():.98+.04*Math.random());M.amp=r==='af'?.55+.45*Math.random():1;
+      if(S.sound&&S.view==='enc')tone(880-(100-(M.sp||98))*22,.07,'sine',.035)}
+    const b=t-M.b;
+    if(r==='af')e+=.035*Math.sin(39*t)+.028*Math.sin(53*t+1);else e+=.11*g(b,.06,.022);
+    e+=-.09*g(b,.165,.008)+g(b,.19,.011)-.2*g(b,.215,.01);
+    const tq=.19+.25*Math.min(1,Math.sqrt(M.iv));
+    if(r==='stemi')e+=.3*g(b,.29,.05)+.42*g(b,tq,.07);else e+=.2*g(b,tq,.05);
+    p=M.out?bump(b-.3)*M.amp:0}
+  return[e,p]}
+let lastTs=0;
+function frame(ts){requestAnimationFrame(frame);const c=document.getElementById('ecg');if(!c){lastTs=ts;return}
+  const dpr=Math.min(2,window.devicePixelRatio||1),W=c.clientWidth,H=c.clientHeight;if(!W)return;
+  if(c.width!==Math.round(W*dpr)){c.width=Math.round(W*dpr);c.height=Math.round(H*dpr);M.x=0;M.ye=null}
+  const ctx=c.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);
+  let dt=Math.min(.1,(ts-lastTs)/1000||0);lastTs=ts;const pps=W/5.5,cs=getComputedStyle(document.documentElement);
+  const bg=cs.getPropertyValue('--mon')||'#05080d',ce=cs.getPropertyValue('--ecg')||'#56f08c',cp=cs.getPropertyValue('--pleth')||'#58c8ff';
+  let steps=Math.max(1,Math.round(dt*pps)),sdt=dt/steps;
+  for(let i=0;i<steps;i++){const[e,p]=sample(sdt);let nx=M.x+sdt*pps;
+    const ye=H*.44-e*H*.34,yp=H*.93-p*H*.2;
+    if(nx>=W){nx=0;M.ye=null}
+    ctx.fillStyle=bg;ctx.fillRect(nx,0,14,H);
+    if(M.ye!==null){ctx.lineWidth=1.8;ctx.lineJoin='round';ctx.strokeStyle=ce;ctx.beginPath();ctx.moveTo(M.x,M.ye);ctx.lineTo(nx,ye);ctx.stroke();
+      ctx.strokeStyle=cp;ctx.beginPath();ctx.moveTo(M.x,M.yp);ctx.lineTo(nx,yp);ctx.stroke()}
+    M.x=nx;M.ye=ye;M.yp=yp}}
+requestAnimationFrame(frame);
+const monHTML=()=>`<div class="mon" id="mon"><canvas id="ecg" aria-label="Live ECG and pulse trace"></canvas><div class="vit">
+<div class="v-hr"><span>HR</span><b id="v-hr">—</b></div><div class="v-sp"><span>SpO₂</span><b id="v-sp">—</b></div><div class="v-bp"><span>BP</span><b id="v-bp">—</b></div><div class="v-rr"><span>RR</span><b id="v-rr">—</b></div><div><span>TEMP</span><b id="v-t">—</b></div></div></div>`;
+
+/* ================= clock + events ================= */
+function tick(min){S.clock+=min;
+  for(const p of S.pts){
+    if(p.state==='hidden'&&p.arr<=S.clock){p.state='door';p.arr=S.clock;page('Triage',`New arrival at the door: ${p.cc.toLowerCase()}.`);if(S.view!=='board')toast('New arrival at the door')}
+    if(p.state==='pend'&&p.readyAt<=S.clock){p.state='ready';const st=p.stages[p.stage];if(!st.code)page(p.bed,`${p.name}: ${st.label.toLowerCase()}.`)}}
+  paintClock()}
+function paintClock(){$('#clk').textContent=hhmm(S.clock);$('#shiftline b').style.width=Math.min(100,(S.clock-1140)/480*100)+'%'}
+function nextEvent(){let t=Infinity;for(const p of S.pts){if(p.state==='hidden')t=Math.min(t,p.arr);if(p.state==='pend')t=Math.min(t,p.readyAt)}return t}
+function skip(){const t=nextEvent();if(t===Infinity)return;const d=Math.max(1,t-S.clock);page('Dr. Hanan',tx(TIPS[S.tip++%TIPS.length]));tick(d);board()}
+
+/* ================= views ================= */
+function intro(){S.view='intro';
+  $('#app').innerHTML=`<div class="intro"><div>
+  <p class="eyebrow">Emergency medicine · intern induction</p>
+  <h1>Your first shift, <em>before</em> your first shift.</h1>
+  <p class="lede">One night in the emergency department of Corniche Medical City, Jeddah. Eight patients come through the door. You triage them, treat them, decide who can wait, and run your first cardiac arrest.</p>
+  <div class="setup">
+   <label for="nm">Your name, as it will be on your badge<input id="nm" autocomplete="off" maxlength="24" placeholder="e.g. Sara" value="${esc(S.name)}"></label>
+   <div><div style="font-size:.82rem;color:var(--mute);margin-bottom:6px">How patients will address you</div>
+   <div class="seg"><button id="gm" class="${S.fem?'':'on'}" onclick="setG(0)">يا دكتور</button><button id="gf" class="${S.fem?'on':''}" onclick="setG(1)">يا دكتورة</button></div></div>
+   <button class="btn" onclick="start()">Start the shift · 19:00</button>
+  </div>
+  <ul class="how">
+   <li><b>Sickest first.</b> The clock moves with every decision. Who you see next is part of your score.</li>
+   <li><b>Watch the monitor.</b> The trace is live. Turn the sound on and you'll hear the rhythm change before you see it.</li>
+   <li><b>Ask Maricel.</b> The charge nurse has seen it all. Asking costs nothing, here or on the real floor.</li>
+  </ul></div>
+  <div><div class="heromon">${monHTML()}</div>
+  <p class="fine" style="margin-top:12px">Bed 4 · sinus rhythm. About 25 minutes to play.</p></div></div>
+  <p class="fine">A teaching simulation with fictional patients and a fictional hospital. Doses follow AHA, APLS, WHO and Surviving Sepsis guidance; items marked “CMC policy” are placeholders for your own hospital's rules. Have your emergency faculty review it before using it for teaching. It is not for clinical decisions. © 2026 The Floor.</p>`;
+  M.v={};setMon({rhythm:'sinus',hr:78,sp:98,bp:'118/74',rr:14,t:36.8,noout:false})}
+function setG(f){S.fem=!!f;$('#gm').classList.toggle('on',!f);$('#gf').classList.toggle('on',!!f);store.set('fem',f?'1':'')}
+function start(){const nm=$('#nm');if(nm){S.name=(nm.value||'').trim();store.set('name',S.name)}
+  S.view='board';S.clock=1140;S.pager=[];S.comp={};S.asked=0;S.tip=0;S.over=false;
+  S.pts=PATIENTS.map(p=>({...p,state:'hidden',stage:0,hist:[],tri:null,seenAt:null,order:{},ans:{}}));
+  page('Dr. Hanan',tx(`Welcome to the floor, {DR}. Three rules tonight: sickest first, ask early, and never guess a dose. I'm one call away.`));
+  tick(0);board()}
+
+function board(){S.view='board';S.cur=null;window.scrollTo(0,0);
+  const door=S.pts.filter(p=>p.state==='door'),ready=S.pts.filter(p=>p.state==='ready'),pend=S.pts.filter(p=>p.state==='pend'),done=S.pts.filter(p=>p.state==='done');
+  const code=ready.find(p=>p.stages[p.stage].code);
+  if(code&&!door.length){codeAlarm(code);return}
+  if(done.length===S.pts.length){debrief();return}
+  const card=(p,kind)=>{const st=p.stages[p.stage];
+    if(kind==='door')return`<button class="pc door" onclick="triage('${p.id}')"><span class="ctas q">?</span><span><h3>New arrival</h3><span class="sub">${esc(p.cc)} · arrived ${hhmm(p.arr)}</span></span><span class="go">TRIAGE →</span></button>`;
+    if(kind==='ready')return`<button class="pc ${door.length?'locked':''}" onclick="openPt('${p.id}')"><span class="ctas k${p.ctas}">${p.ctas}</span><span><h3>${p.name}, ${p.age}</h3><span class="sub"><i class="beat" style="animation-duration:${(60/p.hr).toFixed(2)}s"></i>${esc(p.cc)} · ${p.bed} · ${p.seenAt===null?'waiting '+(S.clock-p.arr)+' min':st.label}</span></span><span class="go">${p.seenAt===null?'SEE →':'REVIEW →'}</span></button>`;
+    return`<div class="pc pend"><span class="ctas k${p.ctas}">${p.ctas}</span><span><h3>${p.name}, ${p.age}</h3><span class="sub">${esc(p.cc)} · ${p.bed}</span></span><span class="go" style="color:var(--mute)">${p.waitLabel} · ${hhmm(p.readyAt)}</span></div>`};
+  let h=`<div class="board"><div>`;
+  if(door.length)h+=`<div class="sect"><h2>At the door <span class="n">${door.length}</span></h2><div class="cards">${door.map(p=>card(p,'door')).join('')}</div></div>`;
+  if(ready.length)h+=`<div class="sect"><h2>Needs you <span class="n">${ready.length}</span></h2><div class="cards">${ready.map(p=>card(p,'ready')).join('')}</div>${door.length?`<p class="sub" style="color:var(--mute);font-size:.86rem;margin-top:8px">Someone is at the door. Thirty seconds of triage comes before anything else.</p>`:''}</div>`;
+  if(!door.length&&!ready.length)h+=`<div class="sect"><div class="quiet"><div><b style="color:var(--ink)">Nothing needs you this minute.</b><br>That never lasts.</div><button class="btn sm" onclick="skip()">Fast-forward to ${hhmm(nextEvent())}</button></div></div>`;
+  if(pend.length)h+=`<div class="sect"><h2>Waiting on results <span class="n">${pend.length}</span></h2><div class="cards">${pend.map(p=>card(p,'pend')).join('')}</div></div>`;
+  if(done.length)h+=`<div class="sect"><h2>Dispositioned <span class="n">${done.length}</span></h2><div class="done">${done.map(p=>`<span>${p.name} · ${esc(p.stages[p.stages.length-1].dispo)}</span>`).join('')}</div></div>`;
+  h+=`</div><aside class="pager"><h2>Pager</h2><div class="msgs">${S.pager.slice(0,14).map(m=>`<div class="msg ${m.who==='Dr. Hanan'?'h':''}"><time>${hhmm(m.t)} · ${m.who==='Dr. Hanan'?'<b>Dr. Hanan</b>':esc(m.who)}</time>${m.x}</div>`).join('')}</div></aside></div>`;
+  $('#app').innerHTML=h}
+
+function sayHTML(s){return s?`<div class="say"><div class="who">${esc(s[0])}</div><div class="ar" lang="ar" dir="rtl">${tx(s[1])}</div><div class="en">${tx(s[2])}</div></div>`:''}
+function triage(id){const p=S.pts.find(x=>x.id===id);S.view='tri';S.cur=p;window.scrollTo(0,0);const v=p.door.v;
+  const ab=(c,val)=>`<span class="${c?'ab':''}">${val}</span>`;
+  $('#app').innerHTML=`<div class="sheet"><p class="eyebrow">At the door · ${hhmm(S.clock)} · you have thirty seconds</p>
+  <h1 style="font-size:2rem">${esc(p.cc)}</h1>
+  <p class="look">${p.door.look}</p>
+  <div class="chips">${ab(typeof v.hr!=='number'||v.hr>110||v.hr<50,'HR '+v.hr)}${ab(v.bp==='—'||parseInt(v.bp)<100||parseInt(v.bp)>170,'BP '+v.bp)}${ab(typeof v.rr!=='number'||v.rr>22,'RR '+v.rr)}${ab(v.sp<94,'SpO₂ '+v.sp+'%')}${ab(v.t>=38.5,'T '+v.t+'°')}</div>
+  ${sayHTML(p.door.say)}
+  <div class="q">Which CTAS level?</div>
+  <div class="levels" id="lv">${[1,2,3,4,5].map(n=>`<button class="lv" id="lv${n}" onclick="pickT(${n})"><span class="ctas k${n}">${n}</span><b>${CT[n][0]}</b><small>${CT[n][1]}</small></button>`).join('')}</div>
+  <div id="after"></div></div>`}
+function pickT(n){const p=S.cur;if(p.tri)return;p.tri=n;const d=n-p.ctas;const sc=d===0?2:Math.abs(d)===1?1:0;score('R',sc,2);
+  document.querySelectorAll('.lv').forEach(b=>b.disabled=true);$('#lv'+p.ctas).classList.add('right');if(d)$('#lv'+n).classList.add('wrong');
+  const tag=d===0?'Correct':d>0?'Under-triaged':'Over-triaged';
+  const extra=d>0?` Under-triage is the dangerous direction: it leaves a sick patient in the waiting room.`:d<0?` Over-triage is the safer mistake, but it takes a resus bed and a nurse from someone who needs them.`:'';
+  if(d>1)page('Dr. Hanan',`${p.cc}: you called CTAS ${n}, it was a ${p.ctas}. When the vitals are abnormal, believe them.`);
+  $('#after').innerHTML=`<div class="fb s${sc}"><div class="tag">${tag} · CTAS ${p.ctas}, ${CT[p.ctas][0].toLowerCase()}</div><div>${p.why}${extra}</div></div>
+  <div class="row" style="margin-top:14px"><button class="btn" onclick="endT()">${p.name} goes to ${p.bed} →</button><span class="cost">+2 min</span></div>`;
+  $('#after').scrollIntoView({behavior:'smooth',block:'nearest'})}
+function endT(){S.cur.state='ready';tick(2);board()}
+
+function openPt(id){const p=S.pts.find(x=>x.id===id);
+  if(S.pts.some(x=>x.state==='door')){toast('Triage the new arrival first');return}
+  const ready=S.pts.filter(x=>x.state==='ready');
+  if(ready.length>1){const best=Math.min(...ready.map(x=>x.ctas));const ok=p.ctas===best;score('P',ok?2:0,2);
+    if(!ok){const o=ready.find(x=>x.ctas===best);page('Dr. Hanan',`You went to ${p.name} (CTAS ${p.ctas}) while ${o.name} (CTAS ${o.ctas}) was waiting. Sickest first, always.`)}}
+  if(p.seenAt===null)p.seenAt=S.clock;
+  enterPt(p)}
+function enterPt(p){S.view='enc';S.cur=p;S.step=0;window.scrollTo(0,0);const st=p.stages[p.stage];
+  $('#app').innerHTML=`<div class="enc"><div class="side"><div class="pthead"><span class="ctas k${p.ctas}">${p.ctas}</span><div><h2>${p.name}, ${p.age}${p.sex}</h2><div class="sub">${esc(p.cc)} · ${p.bed}</div></div></div>${monHTML()}</div><div class="story" id="story"></div></div>`;
+  M.v={};M.ye=null;setMon({rhythm:p.rhythm||'sinus',hr:p.door.v.hr,bp:p.door.v.bp,rr:p.door.v.rr,sp:p.door.v.sp,t:p.door.v.t,noout:false,...(p.lastMon||{})});
+  if(typeof p.door.v.hr!=='number')setMon({hr:p.hr});
+  if(st.mon)setMon(st.mon);
+  $('#mon').classList.toggle('alarm',!!st.code);
+  step()}
+function step(){const p=S.cur,st=p.stages[p.stage],s=st.steps[S.step];
+  if(s.mon)setMon(s.mon);
+  const head=`<p class="eyebrow">${p.bed} · ${hhmm(S.clock)}${st.code?' · code running':''}</p>`;
+  if(s.t==='cpr')return cprStep(head,s);
+  if(s.t==='shock')return shockStep(head,s);
+  const key=p.stage+'.'+S.step;const ord=p.order[key]||(p.order[key]=shuffle(s.ch.map((c,i)=>i)));
+  $('#story').innerHTML=`${head}<p class="x">${tx(s.x)}</p>${sayHTML(s.say)}<div class="q">${s.q}</div>
+  <div class="opts">${ord.map((ci,i)=>`<button class="opt" id="o${ci}" onclick="pick(${ci})"><i>${'ABCD'[i]}</i><span>${tx(s.ch[ci][0])}</span></button>`).join('')}</div>
+  <div id="hintbox"><button class="hint" onclick="askM()">Ask Maricel</button></div><div id="after"></div>`;
+  $('#story').scrollIntoView({behavior:'smooth',block:'start'})}
+function askM(){const s=S.cur.stages[S.cur.stage].steps[S.step];S.asked++;$('#hintbox').innerHTML=`<p class="hintx">Maricel: “${s.hint}”</p>`}
+function pick(ci){const p=S.cur,st=p.stages[p.stage],s=st.steps[S.step];const dk=p.stage+'.'+S.step;if(p.ans[dk])return;p.ans[dk]=1;
+  const c=s.ch[ci],sc=c[1];score(s.k,sc,2);p.hist.push({sc,take:s.take});
+  document.querySelectorAll('.opt').forEach(b=>b.disabled=true);$('#o'+ci).classList.add('pick','s'+sc);$('#o0').classList.add('s2');
+  tone(sc===2?1040:sc===1?620:240,.18,sc?'sine':'sawtooth',.05);
+  const tag=sc===2?'Best move':sc===1?'Reasonable, but not the best':'Risky';
+  const han=sc===2?'':`<div class="han"><b>What Dr. Hanan would do:</b> ${tx(s.ch[0][0])}. ${tx(s.ch[0][2])}</div>`;
+  $('#after').innerHTML=`<div class="fb s${sc}"><div class="tag">${tag}</div><div>${tx(c[2])}</div>${han}</div>${nextBtn(STEP_MIN)}`;
+  $('#hintbox').innerHTML='';$('#after').scrollIntoView({behavior:'smooth',block:'nearest'})}
+function nextBtn(min){const p=S.cur,st=p.stages[p.stage],last=S.step===st.steps.length-1;
+  return`<div class="row" style="margin-top:14px"><button class="btn" id="nx" onclick="next(${min})">${last?'Finish →':'Continue →'}</button>${min?`<span class="cost">+${min} min</span>`:''}</div>`}
+function next(min){const p=S.cur,st=p.stages[p.stage];if(min)tick(min);
+  if(S.step<st.steps.length-1){S.step++;step();return}
+  p.lastMon={...M.v};delete p.lastMon.noout;if(typeof M.hr==='number')p.hr=M.hr;
+  const fin=st.dispo||st.out;
+  $('#story').innerHTML=`<p class="eyebrow">${p.bed} · ${hhmm(S.clock)}</p><p class="x">${tx(fin)}</p><div class="row"><button class="btn" onclick="leave()">Back to the floor →</button></div>`;
+  $('#mon').classList.remove('alarm')}
+function leave(){const p=S.cur,st=p.stages[p.stage];
+  if(p.stage<p.stages.length-1){p.stage++;p.state='pend';p.readyAt=S.clock+st.wait;p.waitLabel=st.waitLabel}
+  else{p.state='done';p.doneAt=S.clock;if(st.code)page('Dr. Hanan',tx(`I heard the code from the corridor, {DR}. You kept your head. We'll debrief properly at handover.`))}
+  tick(0);board()}
+
+/* CPR */
+let CPR=null;
+function cprStep(head,s){CPR={taps:[],good:0,total:0,n:s.n,done:false};
+  $('#story').innerHTML=`${head}<p class="x">${tx(s.x)}</p>
+  <div class="cpr"><div class="q" style="text-align:center">Compress at 100–120 a minute</div>
+  <button class="push" id="push" onpointerdown="tap(event)">PUSH</button>
+  <div class="rate"><span id="rt">—</span><small>/min</small></div>
+  <div class="gauge"><div class="zone"></div><div class="pin" id="pin"></div></div>
+  <div class="coach" id="coach">Tap the button, or press the space bar, in time with the ring.</div>
+  <div class="prog"><b id="pg"></b></div></div><div id="after"></div>`;
+  $('#story').scrollIntoView({behavior:'smooth',block:'start'})}
+function tap(ev){if(ev)ev.preventDefault();const c=CPR;if(!c||c.done||S.view!=='enc')return;const now=performance.now();c.taps.push(now);M.tap=M.t;tone(90,.09,'sine',.12);
+  if(c.taps.length>=3){const rate=120000/(now-c.taps[c.taps.length-3]);c.total++;const ok=rate>=100&&rate<=120;if(ok)c.good++;
+    $('#rt').textContent=Math.round(rate);$('#pin').style.left=Math.max(0,Math.min(100,(rate-60)))+'%';
+    $('#coach').textContent=ok?'Good. Hold that pace.':rate<100?'Faster.':'Slower. Let the chest recoil.';
+    $('#coach').style.color=ok?'var(--good)':'var(--ok)';$('#pg').style.width=Math.min(100,c.good/c.n*100)+'%';
+    if(c.good>=c.n||c.total>=c.n*3)cprEnd()}}
+function cprEnd(){const c=CPR;c.done=true;const f=c.good/c.total,sc=f>=.7?2:f>=.45?1:0;score('A',sc,2);S.cur.hist.push({sc,take:`CPR: 100–120 compressions a minute, 5–6 cm deep, full recoil, minimal pauses.`});
+  $('#push').disabled=true;
+  $('#after').innerHTML=`<div class="fb s${sc}"><div class="tag">${Math.round(f*100)}% of compressions in the target zone</div><div>${sc===2?'That is high-quality CPR. Good compressions are the single thing in an arrest that everything else depends on.':sc===1?'Uneven. Most people go too fast under stress. Count out loud, or use the metronome on the defibrillator.':'Well off the target. Too slow and no blood moves; too fast and the heart has no time to refill. Aim for two compressions a second and count out loud.'}</div></div>${nextBtn(2)}`}
+document.addEventListener('keydown',e=>{if(e.code==='Space'&&CPR&&!CPR.done&&S.view==='enc'&&document.getElementById('push')){e.preventDefault();if(!e.repeat)tap()}});
+
+/* shock */
+function shockStep(head,s){CPR=null;
+  $('#story').innerHTML=`${head}<p class="x">${tx(s.x)}</p>
+  <div class="cpr"><div class="q">Shock ${s.n} · 200 J biphasic</div><div class="charge" id="chg"><b></b></div>
+  <div class="coach" id="coach">Compressions continue while it charges.</div>
+  <button class="btn" id="sb" onclick="charge()">Charge</button></div><div id="after"></div>`;
+  $('#story').scrollIntoView({behavior:'smooth',block:'start'})}
+function charge(){const b=$('#sb');b.disabled=true;$('#chg').classList.add('go');tone(300,1.6,'sawtooth',.03,2200);$('#coach').textContent='Charging…';
+  setTimeout(()=>{if(!$('#sb'))return;b.disabled=false;b.textContent='Everyone clear. Shock';b.onclick=shock;$('#coach').textContent='“Oxygen away. Everyone clear. Shocking.”';tone(1500,.5,'square',.03)},1650)}
+function shock(){$('#sb').disabled=true;const f=$('#flash');f.classList.remove('on');void f.offsetWidth;f.classList.add('on');setTimeout(()=>f.classList.remove('on'),600);tone(70,.35,'square',.2);M.flatUntil=M.t+1.3;
+  $('#coach').textContent='Shock delivered.';$('#after').innerHTML=nextBtn(0)}
+
+function codeAlarm(p){S.view='code';alarmSound();
+  const d=document.createElement('div');d.id='code';d.innerHTML=`<div><p class="eyebrow" style="color:#fff">${hhmm(S.clock)} · overhead page</p><h1>CODE BLUE</h1><p>Resus 1. Abu Khalid. Maricel is shouting your name.</p><button class="btn" onclick="runCode()">Run</button></div>`;
+  document.body.appendChild(d)}
+function runCode(){const d=$('#code');if(d)d.remove();enterPt(S.pts.find(x=>x.id==='khalid'))}
+
+/* ================= debrief ================= */
+function debrief(){S.view='deb';S.over=true;window.scrollTo(0,0);
+  let got=0,max=0;for(const k in S.comp){got+=S.comp[k][0];max+=S.comp[k][1]}const pct=Math.round(got/max*100);
+  const verdict=pct>=85?'Ready for Sunday.':pct>=70?'Safe, and getting sharper.':pct>=50?'Not yet. Run it again.':'Tonight was hard. That is what tonight is for.';
+  const best=+store.get('best')||0;if(pct>best)store.set('best',pct);
+  const keys=Object.keys(COMP),R=92,cx=150,cy=120;
+  const pt=(i,r)=>{const a=-Math.PI/2+i*2*Math.PI/5;return[(cx+r*Math.cos(a)).toFixed(1),(cy+r*Math.sin(a)).toFixed(1)]};
+  const val=k=>S.comp[k]&&S.comp[k][1]?S.comp[k][0]/S.comp[k][1]:0;
+  const radar=`<svg viewBox="-75 -14 450 262" width="100%" role="img" aria-label="Scores by skill">
+  ${[.33,.66,1].map(f=>`<polygon points="${keys.map((k,i)=>pt(i,R*f).join(',')).join(' ')}" fill="none" stroke="var(--line)"/>`).join('')}
+  ${keys.map((k,i)=>`<line x1="${cx}" y1="${cy}" x2="${pt(i,R)[0]}" y2="${pt(i,R)[1]}" stroke="var(--line)"/>`).join('')}
+  <polygon points="${keys.map((k,i)=>pt(i,R*Math.max(.06,val(k))).join(',')).join(' ')}" fill="color-mix(in srgb,var(--lamp) 30%,transparent)" stroke="var(--lamp)" stroke-width="2"/>
+  ${keys.map((k,i)=>{const[x,y]=pt(i,R+14);return`<text x="${x}" y="${y}" text-anchor="${i===0?'middle':i<3?'start':'end'}" ><tspan x="${x}">${COMP[k]}</tspan><tspan x="${x}" dy="13" style="fill:var(--ink)">${Math.round(val(k)*100)}%</tspan></text>`}).join('')}</svg>`;
+  const rows=S.pts.map(p=>{const w=p.seenAt-p.arr,ok=w<=TARGET[p.ctas];
+    return`<tr><td><b>${p.name}</b>, ${p.age}<br><span style="color:var(--mute);font-size:.82rem">${esc(p.cc)}</span></td>
+    <td class="mono">${p.tri===p.ctas?p.ctas:`${p.tri} <span style="color:var(--bad)">(was ${p.ctas})</span>`}</td>
+    <td class="mono" style="color:var(--${ok?'good':'bad'})">${w} min<br><span style="color:var(--mute);font-size:.74rem">target ${TARGET[p.ctas]}</span></td>
+    <td class="dots">${p.hist.map(h=>`<i class="d${h.sc}"></i>`).join('')}</td><td style="font-size:.84rem;color:var(--mute)">${esc(p.stages[p.stages.length-1].dispo)}</td></tr>`}).join('');
+  const takes=[];S.pts.forEach(p=>p.hist.forEach(h=>{const t=takes.find(x=>x.t===h.take);if(t){if(h.sc<2)t.rev=true}else takes.push({t:h.take,rev:h.sc<2})}));
+  takes.sort((a,b)=>b.rev-a.rev);const nrev=takes.filter(t=>t.rev).length;
+  $('#app').innerHTML=`<div class="deb"><div style="display:grid;gap:22px;min-width:0">
+  <div><p class="eyebrow">03:00 · handover · debrief with Dr. Hanan</p><h1>${verdict}</h1>
+  <p class="lede" style="color:var(--mute);margin-top:10px;max-width:40em">${tx(`Eight patients, {DR}, and all eight left your hands with a plan. You asked Maricel for help ${S.asked} time${S.asked===1?'':'s'}${S.asked?'. Keep doing that.':'. On the real floor, ask more. It is a skill, not a weakness.'}`)}</p></div>
+  <div class="card tbl"><table><thead><tr><th>Patient</th><th>Your CTAS</th><th>Door to doctor</th><th>Decisions</th><th>Outcome</th></tr></thead><tbody>${rows}</tbody></table></div>
+  <div class="card"><div class="row" style="justify-content:space-between"><h2 style="font-size:1.3rem">Your pocket card</h2><button class="btn ghost sm" id="cp" onclick="copyCard()">Copy as text</button></div>
+  <p style="color:var(--mute);font-size:.9rem;margin-top:4px">${nrev?`The ${nrev} in bold ${nrev===1?'is the one':'are the ones'} to review before your first real shift.`:'A clean sheet. Carry these with you anyway.'}</p>
+  <ul class="pocket" id="pocket">${takes.map(t=>`<li class="${t.rev?'rev':''}">${t.t}</li>`).join('')}</ul></div>
+  </div>
+  <aside style="display:grid;gap:18px"><div class="card" style="text-align:center"><div class="big">${pct}<span style="font-size:1.4rem">%</span></div><p style="color:var(--mute);font-size:.86rem">${got} of ${max} points${best&&best>=pct?` · your best ${best}%`:''}</p>${radar}</div>
+  <button class="btn" onclick="start()">Work the shift again</button>
+  <p class="fine" style="margin:0">Choices are reshuffled every shift. Teaching simulation only: have your emergency faculty review doses and “CMC policy” items before use.</p></aside></div>`}
+function copyCard(){const t='THE FLOOR — pocket card\n\n'+[...document.querySelectorAll('#pocket li')].map(l=>'• '+l.textContent).join('\n');
+  const done=()=>{$('#cp').textContent='Copied'};
+  try{navigator.clipboard.writeText(t).then(done,()=>sel())}catch(e){sel()}
+  function sel(){const r=document.createRange();r.selectNodeContents($('#pocket'));const s=getSelection();s.removeAllRanges();s.addRange(r);$('#cp').textContent='Selected. Press copy'}}
+
+/* boot */
+S.name=store.get('name')||'';S.fem=!!store.get('fem');
+intro();paintClock();
+</script>
